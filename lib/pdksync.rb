@@ -10,6 +10,7 @@ require 'json'
 require 'yaml'
 require 'colorize'
 require 'bundler'
+require 'octokit'
 
 # @summary
 #   This module set's out and controls the pdksync process
@@ -51,6 +52,7 @@ module PdkSync
   def self.main(steps: [:clone], args: nil)
     create_filespace
     client = setup_client
+    check_pdk_version
     module_names = return_modules
     raise "No modules found in '#{@managed_modules}'" if module_names.nil?
     validate_modules_exist(client, module_names)
@@ -177,6 +179,22 @@ module PdkSync
     pr_list.each do |pr|
       puts pr
     end
+  end
+
+  # @summary
+  #   Check the local pdk version against the most recent tagged release on GitHub
+  def self.check_pdk_version
+    _stdout, stderr, status = Open3.capture3("#{return_pdk_path} --version")
+    raise "(FAILURE) Unable to find pdk at '#{return_pdk_path}'.".red unless status.exitstatus
+
+    local_version = _stdout.strip
+    remote_version = Octokit.tags('puppetlabs/pdk').first
+    unless remote_version[:name] =~ %r{#{local_version}} 
+      puts "(WARNING) The current version of pdk is #{remote_version[:name]} however you are using v#{local_version}s".red 
+    end
+
+  rescue StandardError => error
+    puts "(WARNING) Unable to check latest pdk version.".red
   end
 
   # @summary

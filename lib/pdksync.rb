@@ -133,7 +133,7 @@ module PdkSync
       if steps.include?(:create_commit)
         Dir.chdir(main_path) unless Dir.pwd == main_path
         git_instance = Git.open(output_path)
-        create_commit(git_instance, module_args[:branch_name], module_args[:commit_message])
+        next if !create_commit(git_instance, module_args[:branch_name], module_args[:commit_message])
         print 'commit created, '
       end
       if steps.include?(:push)
@@ -275,6 +275,8 @@ module PdkSync
     checkout_branch(git_repo, branch_name)
     if add_staged_files(git_repo) # ignore rubocop for clarity on side effect ordering # rubocop:disable Style/GuardClause
       commit_staged_files(git_repo, branch_name, commit_message)
+    else
+      false
     end
   end
 
@@ -387,10 +389,10 @@ module PdkSync
   def self.add_staged_files(git_repo)
     if git_repo.status.changed != {}
       git_repo.add(all: true)
-      puts 'All files have been staged.'
+      puts 'all files have been staged.'
       true
     else
-      puts 'Nothing to commit.'
+      puts 'nothing to commit.'
       false
     end
   end
